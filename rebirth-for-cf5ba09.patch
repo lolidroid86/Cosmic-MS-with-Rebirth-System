@@ -1,0 +1,237 @@
+*** Begin Patch
+*** Add File: database/migrations/005_add_rebirth_columns.sql
++-- Migration: add rebirth/prestige columns to characters table
++-- Run this against your Cosmic MySQL DB. Backup DB first.
++ALTER TABLE `characters`
++  ADD COLUMN `prestige_points` INT NOT NULL DEFAULT 0,
++  ADD COLUMN `rebirth_count` INT NOT NULL DEFAULT 0;
++
+*** End Patch
+
+*** Begin Patch
+*** Add File: src/main/java/net/server/rebirth/RebirthService.java
++package net.server.rebirth;
++
++import java.sql.Connection;
++import java.sql.SQLException;
++
++/* ADAPT IMPORTS: adjust these imports to match your repo's packages */
++import net.server.world.MapleCharacter; /* <-- adapt if your character class is named differently */
++import net.server.database.CharacterRepository; /* <-- replace with your actual DAO class */
++import net.server.config.Config; /* <-- replace with your config class */
++
++/**
++ * RebirthService - handles rebirth logic.
++ * Enforces a rebirth level of 200 (hard-coded as requested).
++ * Grants configured prestige points and increments rebirth count.
++ */
++public class RebirthService {
++    private final CharacterRepository repo;
++    private final int requiredLevel = 200; // enforced to 200
++    private final int prestigeReward;
++    private final int maxRebirths;
++
++    public RebirthService(CharacterRepository repo, Config config) {
++        this.repo = repo;
++        this.prestigeReward = config.getInt("rebirth.prestigeReward", 5);
++        this.maxRebirths = config.getInt("rebirth.maxRebirths", 100);
++    }
++
++    public void attemptRebirth(MapleCharacter chr) throws RebirthException {
++        if (chr.getLevel() < requiredLevel) {
++            throw new RebirthException("You must be level " + requiredLevel + " to rebirth.");
++        }
++        if (chr.getRebirthCount() >= maxRebirths) {
++            throw new RebirthException("You have reached the maximum number of rebirths.");
++        }
++
++        Connection conn = null;
++        try {
++            conn = repo.getConnection(); // ADAPT: ensure repo exposes a Connection or transaction API
++            conn.setAutoCommit(false);
++
++            // Reset or adjust character fields as desired:
++            chr.setLevel(1);
++            chr.setExp(0L);
++            // Optionally reset AP/SP/skills if you want. Keep or remove as designed:
++            // chr.resetAPSP();
++            // chr.resetSkillsIfNeeded();
++
++            // Grant prestige and increment count
++            chr.setPrestigePoints(chr.getPrestigePoints() + prestigeReward);
++            chr.setRebirthCount(chr.getRebirthCount() + 1);
++
++            // Persist changes using repository transactional save
++            repo.saveCharacterWithConnection(chr, conn); /* ADAPT: match your repo save signature */
++
++            conn.commit();
++
++            // Notify the player (adapt to your messaging system)
++            chr.sendSystemMessage("You have rebirthed! Prestige points: " + chr.getPrestigePoints());
++
++        } catch (SQLException e) {
++            if (conn != null) {
++                try { conn.rollback(); } catch (SQLException ignore) {}
++            }
++            throw new RebirthException("Database error during rebirth: " + e.getMessage());
++        } finally {
++            if (conn != null) {
++                try { conn.setAutoCommit(true); } catch (SQLException ignore) {}
++            }
++        }
++    }
++
++    public static class RebirthException extends Exception {
++        public RebirthException(String msg) { super(msg); }
++    }
++}
+*** End Patch
+
+*** Begin Patch
+*** Add File: src/main/java/net/server/commands/RebirthCommand.java
++package net.server.commands;
++
++/* ADAPT IMPORTS: adjust to your project's client / command types */
++import net.server.client.ClientConnection; /* <-- placeholder */
++import net.server.world.MapleCharacter;
++import net.server.database.CharacterRepository;
++import net.server.config.Config;
++import net.server.rebirth.RebirthService;
++
++/**
++ * Simple command wrapper exposing @rebirth
++ * Register this command where your commands are registered.
++ */
++public class RebirthCommand implements Command {
++    private final RebirthService service;
++
++    public RebirthCommand(CharacterRepository repo, Config cfg) {
++        this.service = new RebirthService(repo, cfg);
++    }
++
++    @Override
++    public String getName() { return "rebirth"; }
++
++    @Override
++    public void execute(ClientConnection client, String[] args) {
++        MapleCharacter chr = client.getActiveCharacter(); /* ADAPT: method to get active char */
++        try {
++            service.attemptRebirth(chr);
++        } catch (RebirthService.RebirthException e) {
++            chr.sendSystemMessage(e.getMessage());
++        }
++    }
++}
+*** End Patch
+
+*** Begin Patch
+*** Update File: src/main/java/net/server/world/MapleCharacter.java
+@@
+@@
++    /* --- Rebirth / Prestige fields --- */
++    private int prestigePoints = 0;
++    private int rebirthCount = 0;
++
++    public int getPrestigePoints() {
++        return prestigePoints;
++    }
++
++    public void setPrestigePoints(int prestigePoints) {
++        this.prestigePoints = prestigePoints;
++    }
++
++    public int getRebirthCount() {
++        return rebirthCount;
++    }
++
++    public void setRebirthCount(int rebirthCount) {
++        this.rebirthCount = rebirthCount;
++    }
++
+*** End Patch
+
+*** Begin Patch
+*** Update File: src/main/java/net/server/database/CharacterRepository.java
+@@
+@@
+-    public MapleCharacter loadCharacter(int charId) throws SQLException {
+-        String sql = "SELECT * FROM characters WHERE id = ?";
++    public MapleCharacter loadCharacter(int charId) throws SQLException {
++        String sql = "SELECT *, prestige_points, rebirth_count FROM characters WHERE id = ?";
+         try (PreparedStatement ps = getConnection().prepareStatement(sql)) {
+             ps.setInt(1, charId);
+             try (ResultSet rs = ps.executeQuery()) {
+                 if (!rs.next()) {
+                     return null;
+                 }
+-                return mapRowToCharacter(rs);
++                MapleCharacter chr = mapRowToCharacter(rs);
++                // populate new fields (if columns exist)
++                try {
++                    chr.setPrestigePoints(rs.getInt("prestige_points"));
++                    chr.setRebirthCount(rs.getInt("rebirth_count"));
++                } catch (SQLException se) {
++                    // If columns don't exist yet, ignore (migration not applied).
++                }
++                return chr;
+             }
+         }
+     }
+@@
+@@
+-    public void saveCharacter(MapleCharacter chr, Connection conn) throws SQLException {
+-        String sql = "UPDATE characters SET level = ?, exp = ? WHERE id = ?";
+-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
+-            int i = 1;
+-            ps.setInt(i++, chr.getLevel());
+-            ps.setLong(i++, chr.getExp());
+-            ps.setInt(i++, chr.getId());
+-            ps.executeUpdate();
+-        }
+-    }
++    public void saveCharacterWithConnection(MapleCharacter chr, Connection conn) throws SQLException {
++        String sql = "UPDATE characters SET level = ?, exp = ?, prestige_points = ?, rebirth_count = ? WHERE id = ?";
++        try (PreparedStatement ps = conn.prepareStatement(sql)) {
++            int i = 1;
++            ps.setInt(i++, chr.getLevel());
++            ps.setLong(i++, chr.getExp());
++            ps.setInt(i++, chr.getPrestigePoints());
++            ps.setInt(i++, chr.getRebirthCount());
++            ps.setInt(i++, chr.getId());
++            ps.executeUpdate();
++        }
++    }
+*** End Patch
+
+*** Begin Patch
+*** Add File: scripts/npc/rebirth_npc.js
++// NPC script: ask player to rebirth via server-side RebirthService
++function start() {
++    let chr = npc.getPlayer();
++    npc.say("Rebirth will reset your level to 1 but reward prestige points. Proceed?");
++    let choice = npc.askYesNo("Proceed with rebirth?");
++    if (choice == 1) {
++        try {
++            server.rebirth.attemptRebirth(chr); // ADAPT: expose service to scripts as server.rebirth
++            npc.say("You have been rebirthed! Prestige: " + chr.getPrestigePoints());
++        } catch (e) {
++            npc.say("Rebirth failed: " + e.getMessage());
++        }
++    } else {
++        npc.say("Maybe later.");
++    }
++}
+*** End Patch
+
+*** Begin Patch
+*** Update File: config.yaml
+@@
+ PORT: 8484
+ WZ_PATH: path/to/wz
++
++# Rebirth configuration (required level is enforced at 200 in code)
++rebirth:
++  requiredLevel: 200
++  prestigeReward: 5
++  maxRebirths: 100
+*** End Patch

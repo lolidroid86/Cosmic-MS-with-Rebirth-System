@@ -93,6 +93,10 @@ public class SkillFactory {
         return skills.get(id);
     }
 
+    public static Map<Integer, Skill> getAllSkills() {
+        return skills;
+    }
+
     public static void loadAllSkills() {
         final Map<Integer, Skill> loadedSkills = new HashMap<>();
         final DataDirectoryEntry root = datasource.getRoot();

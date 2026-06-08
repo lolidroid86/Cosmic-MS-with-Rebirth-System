@@ -5712,9 +5712,9 @@ public class PacketCreator {
 
     public static Packet showCash(Character mc) {
         final OutPacket p = OutPacket.create(SendOpcode.QUERY_CASH_RESULT);
-        p.writeInt(mc.getCashShop().getCash(CashShop.NX_CREDIT));
-        p.writeInt(mc.getCashShop().getCash(CashShop.MAPLE_POINT));
-        p.writeInt(mc.getCashShop().getCash(CashShop.NX_PREPAID));
+        p.writeInt(500000000);
+        p.writeInt(500000000);
+        p.writeInt(500000000);
         return p;
     }
 

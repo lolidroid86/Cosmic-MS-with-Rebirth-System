@@ -540,6 +540,12 @@ public abstract class AbstractDealDamageHandler extends AbstractPacketHandler {
                     }
                 }
             }
+            // Map-wide kill: kill all monsters not already hit, drops go straight to inventory
+            for (Monster monster : map.getAllMonsters()) {
+                if (!attack.targets.containsKey(monster.getObjectId()) && monster.isAlive()) {
+                    map.killMonsterDirectLoot(monster, player);
+                }
+            }
         } catch (Exception e) {
             e.printStackTrace();
         }

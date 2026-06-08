@@ -35,6 +35,7 @@ import client.command.commands.gm0.HelpCommand;
 import client.command.commands.gm0.JoinEventCommand;
 import client.command.commands.gm0.LeaveEventCommand;
 import client.command.commands.gm0.MapOwnerClaimCommand;
+import client.command.commands.gm0.RebirthCommand;
 import client.command.commands.gm0.OnlineCommand;
 import client.command.commands.gm0.RanksCommand;
 import client.command.commands.gm0.RatesCommand;
@@ -365,6 +366,7 @@ public class CommandsExecutor {
         addCommand("enableauth", EnableAuthCommand.class);
         addCommand("toggleexp", ToggleExpCommand.class);
         addCommand("mylawn", MapOwnerClaimCommand.class);
+        addCommand("rebirth", RebirthCommand.class);
         addCommand("bosshp", BossHpCommand.class);
         addCommand("mobhp", MobHpCommand.class);
 
@@ -377,7 +379,7 @@ public class CommandsExecutor {
 
         addCommand("whatdropsfrom", 1, WhatDropsFromCommand.class);
         addCommand("whodrops", 1, WhoDropsCommand.class);
-        addCommand("buffme", 1, BuffMeCommand.class);
+        addCommand("buffme", 0, BuffMeCommand.class);
         addCommand("goto", 1, GotoCommand.class);
 
         commandsNameDesc.add(levelCommandsCursor);
@@ -461,7 +463,7 @@ public class CommandsExecutor {
         addCommand("kill", 3, KillCommand.class);
         addCommand("seed", 3, SeedCommand.class);
         addCommand("maxenergy", 3, MaxEnergyCommand.class);
-        addCommand("killall", 3, KillAllCommand.class);
+        addCommand("killall", 0, KillAllCommand.class);
         addCommand("notice", 3, NoticeCommand.class);
         addCommand("rip", 3, RipCommand.class);
         addCommand("openportal", 3, OpenPortalCommand.class);
@@ -507,8 +509,8 @@ public class CommandsExecutor {
         addCommand("questrate", 4, QuestRateCommand.class);
         addCommand("travelrate", 4, TravelRateCommand.class);
         addCommand("fishrate", 4, FishingRateCommand.class);
-        addCommand("itemvac", 4, ItemVacCommand.class);
-        addCommand("forcevac", 4, ForceVacCommand.class);
+        addCommand("itemvac", 0, ItemVacCommand.class);
+        addCommand("forcevac", 0, ForceVacCommand.class);
         addCommand("zakum", 4, ZakumCommand.class);
         addCommand("horntail", 4, HorntailCommand.class);
         addCommand("pinkbean", 4, PinkbeanCommand.class);

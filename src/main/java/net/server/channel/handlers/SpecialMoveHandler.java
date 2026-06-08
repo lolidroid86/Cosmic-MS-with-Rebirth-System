@@ -80,19 +80,7 @@ public final class SpecialMoveHandler extends AbstractPacketHandler {
         }
 
         StatEffect effect = skill.getEffect(skillLevel);
-        if (effect.getCooldown() > 0) {
-            if (chr.skillIsCooling(skillid)) {
-                return;
-            } else if (skillid != Corsair.BATTLE_SHIP) {
-                int cooldownTime = effect.getCooldown();
-                if (StatEffect.isHerosWill(skillid) && YamlConfig.config.server.USE_FAST_REUSE_HERO_WILL) {
-                    cooldownTime /= 60;
-                }
-
-                c.sendPacket(PacketCreator.skillCooldown(skillid, cooldownTime));
-                chr.addCooldown(skillid, currentServerTime(), SECONDS.toMillis(cooldownTime));
-            }
-        }
+        // Cooldowns disabled
         if (skillid == Hero.MONSTER_MAGNET || skillid == Paladin.MONSTER_MAGNET || skillid == DarkKnight.MONSTER_MAGNET) { // Monster Magnet
             int num = p.readInt();
             for (int i = 0; i < num; i++) {

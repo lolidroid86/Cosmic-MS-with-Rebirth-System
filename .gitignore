@@ -24,3 +24,6 @@ database/docker-pg-db-data
 
 # macOS files
 .DS_Store
+
+# Portable MySQL binaries and data (not for repo)
+/mysql/

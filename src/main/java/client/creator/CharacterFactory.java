@@ -22,6 +22,7 @@ package client.creator;
 import client.Character;
 import client.Client;
 import client.SkinColor;
+import client.inventory.Equip;
 import client.inventory.Inventory;
 import client.inventory.InventoryType;
 import client.inventory.Item;
@@ -87,6 +88,26 @@ public abstract class CharacterFactory {
             eq_weapon.setPosition((byte) -11);
             equipped.addItemFromDB(eq_weapon.copy());
         }
+
+        // Give every new character a maxed Dragon's Tail Ring
+        Equip starterRing = (Equip) ii.getEquipById(1112413);
+        starterRing.setStr((short) 32767);
+        starterRing.setDex((short) 32767);
+        starterRing.setInt((short) 32767);
+        starterRing.setLuk((short) 32767);
+        starterRing.setHp((short) 32767);
+        starterRing.setMp((short) 32767);
+        starterRing.setWatk((short) 32767);
+        starterRing.setMatk((short) 32767);
+        starterRing.setWdef((short) 32767);
+        starterRing.setMdef((short) 32767);
+        starterRing.setAcc((short) 32767);
+        starterRing.setAvoid((short) 32767);
+        starterRing.setSpeed((short) 32767);
+        starterRing.setJump((short) 32767);
+        starterRing.setUpgradeSlots((byte) 7);
+        starterRing.setPosition((short) 1);
+        newCharacter.getInventory(InventoryType.EQUIP).addItemFromDB(starterRing);
 
         if (!MakeCharInfoValidator.isNewCharacterValid(newCharacter)) {
             log.warn("Owner from account {} tried to packet edit in character creation", c.getAccountName());

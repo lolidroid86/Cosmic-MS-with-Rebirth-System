@@ -29,6 +29,7 @@ import client.inventory.Equip;
 import client.inventory.InventoryType;
 import client.inventory.Item;
 import client.inventory.Pet;
+import client.inventory.manipulator.InventoryManipulator;
 import client.status.MonsterStatus;
 import client.status.MonsterStatusEffect;
 import config.YamlConfig;
@@ -960,7 +961,7 @@ public class MapleMap {
         }
     }
 
-    private List<MapItem> getDroppedItems() {
+    public List<MapItem> getDroppedItems() {
         objectRLock.lock();
         try {
             return new LinkedList<>(droppedItems.keySet());
@@ -1441,6 +1442,46 @@ public class MapleMap {
         }
 
 
+    }
+
+    public void killMonsterDirectLoot(final Monster monster, final Character chr) {
+        killMonster(monster, chr, false, (short) 0);
+        if (monster.dropsDisabled() || !dropsOn) return;
+
+        final MonsterInformationProvider mi = MonsterInformationProvider.getInstance();
+        final ItemInformationProvider ii = ItemInformationProvider.getInstance();
+        int chRate = !monster.isBoss() ? chr.getDropRate() : chr.getBossDropRate();
+
+        List<MonsterDropEntry> lootEntry = mi.retrieveEffectiveDrop(monster.getId());
+        if (lootEntry.isEmpty()) return;
+
+        Collections.shuffle(lootEntry);
+        for (MonsterDropEntry de : lootEntry) {
+            int dropChance = (int) Math.min((float) de.chance * chRate, Integer.MAX_VALUE);
+            if (Randomizer.nextInt(999999) < dropChance) {
+                if (de.itemId == 0) {
+                    int mesos = Randomizer.nextInt(Math.max(1, de.Maximum - de.Minimum)) + de.Minimum;
+                    mesos = mesos * chr.getMesoRate();
+                    if (mesos > 0) chr.gainMeso(mesos, false, true, false);
+                } else {
+                    Item idrop;
+                    if (ItemConstants.getInventoryType(de.itemId) == InventoryType.EQUIP) {
+                        String name = ii.getName(de.itemId);
+                        if (name == null) name = "";
+                        Map<String, Integer> stats = ii.getEquipStats(de.itemId);
+                        int reqINT = stats != null ? stats.getOrDefault("reqINT", 0) : 0;
+                        if (reqINT > 0 || name.toLowerCase().contains("maple")) {
+                            idrop = ii.randomizeStats((Equip) ii.getEquipById(de.itemId));
+                            InventoryManipulator.addFromDrop(chr.getClient(), idrop, false);
+                        }
+                    } else {
+                        idrop = new Item(de.itemId, (short) 0, (short) (de.Maximum != 1
+                                ? Randomizer.nextInt(de.Maximum - de.Minimum) + de.Minimum : 1));
+                        InventoryManipulator.addFromDrop(chr.getClient(), idrop, false);
+                    }
+                }
+            }
+        }
     }
 
     public void killFriendlies(Monster mob) {

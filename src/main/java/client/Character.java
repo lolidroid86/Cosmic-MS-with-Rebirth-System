@@ -222,6 +222,7 @@ public class Character extends AbstractCharacterObject {
     private int mesosTraded = 0;
     private int possibleReports = 10;
     private int ariantPoints, dojoPoints, vanquisherStage, dojoStage, dojoEnergy, vanquisherKills;
+    private int reborns = 0;
     private int expRate = 1, mesoRate = 1, dropRate = 1, expCoupon = 1, mesoCoupon = 1, dropCoupon = 1;
     private int omokwins, omokties, omoklosses, matchcardwins, matchcardties, matchcardlosses;
     private int owlSearch;
@@ -3009,13 +3010,8 @@ public class Character extends AbstractCharacterObject {
                                         unequipPet(pet, true);
                                     }
 
-                                    if (ItemConstants.isExpirablePet(item.getItemId())) {
-                                        sendPacket(PacketCreator.itemExpired(item.getItemId()));
-                                        toberemove.add(item);
-                                    } else {
-                                        item.setExpiration(-1);
-                                        forceUpdateItem(item);
-                                    }
+                                    item.setExpiration(-1);
+                                    forceUpdateItem(item);
                                 }
                             }
                         }
@@ -6918,6 +6914,7 @@ public class Character extends AbstractCharacterObject {
                     ret.monsterbook.loadCards(charid);
                     ret.vanquisherStage = rs.getInt("vanquisherStage");
                     ret.ariantPoints = rs.getInt("ariantPoints");
+                    ret.reborns = rs.getInt("reborns");
                     ret.dojoPoints = rs.getInt("dojoPoints");
                     ret.dojoStage = rs.getInt("lastDojoStage");
                     ret.dataString = rs.getString("dataString");
@@ -6953,11 +6950,12 @@ public class Character extends AbstractCharacterObject {
                             Equip equip = (Equip) item.getLeft();
                             if (equip.getRingId() > -1) {
                                 Ring ring = Ring.loadFromDb(equip.getRingId());
-                                if (item.getRight().equals(InventoryType.EQUIPPED)) {
-                                    ring.equip();
+                                if (ring != null) {
+                                    if (item.getRight().equals(InventoryType.EQUIPPED)) {
+                                        ring.equip();
+                                    }
+                                    ret.addPlayerRing(ring);
                                 }
-
-                                ret.addPlayerRing(ring);
                             }
                         }
                     }
@@ -8256,7 +8254,7 @@ public class Character extends AbstractCharacterObject {
             con.setTransactionIsolation(Connection.TRANSACTION_READ_UNCOMMITTED);
 
             try {
-                try (PreparedStatement ps = con.prepareStatement("UPDATE characters SET level = ?, fame = ?, str = ?, dex = ?, luk = ?, `int` = ?, exp = ?, gachaexp = ?, hp = ?, mp = ?, maxhp = ?, maxmp = ?, sp = ?, ap = ?, gm = ?, skincolor = ?, gender = ?, job = ?, hair = ?, face = ?, map = ?, meso = ?, hpMpUsed = ?, spawnpoint = ?, party = ?, buddyCapacity = ?, messengerid = ?, messengerposition = ?, mountlevel = ?, mountexp = ?, mounttiredness= ?, equipslots = ?, useslots = ?, setupslots = ?, etcslots = ?,  monsterbookcover = ?, vanquisherStage = ?, dojoPoints = ?, lastDojoStage = ?, finishedDojoTutorial = ?, vanquisherKills = ?, matchcardwins = ?, matchcardlosses = ?, matchcardties = ?, omokwins = ?, omoklosses = ?, omokties = ?, dataString = ?, fquest = ?, jailexpire = ?, partnerId = ?, marriageItemId = ?, lastExpGainTime = ?, ariantPoints = ?, partySearch = ? WHERE id = ?", Statement.RETURN_GENERATED_KEYS)) {
+                try (PreparedStatement ps = con.prepareStatement("UPDATE characters SET level = ?, fame = ?, str = ?, dex = ?, luk = ?, `int` = ?, exp = ?, gachaexp = ?, hp = ?, mp = ?, maxhp = ?, maxmp = ?, sp = ?, ap = ?, gm = ?, skincolor = ?, gender = ?, job = ?, hair = ?, face = ?, map = ?, meso = ?, hpMpUsed = ?, spawnpoint = ?, party = ?, buddyCapacity = ?, messengerid = ?, messengerposition = ?, mountlevel = ?, mountexp = ?, mounttiredness= ?, equipslots = ?, useslots = ?, setupslots = ?, etcslots = ?,  monsterbookcover = ?, vanquisherStage = ?, dojoPoints = ?, lastDojoStage = ?, finishedDojoTutorial = ?, vanquisherKills = ?, matchcardwins = ?, matchcardlosses = ?, matchcardties = ?, omokwins = ?, omoklosses = ?, omokties = ?, dataString = ?, fquest = ?, jailexpire = ?, partnerId = ?, marriageItemId = ?, lastExpGainTime = ?, ariantPoints = ?, reborns = ?, partySearch = ? WHERE id = ?", Statement.RETURN_GENERATED_KEYS)) {
                     ps.setInt(1, level);    // thanks CanIGetaPR for noticing an unnecessary "level" limitation when persisting DB data
                     ps.setInt(2, fame);
 
@@ -8369,8 +8367,9 @@ public class Character extends AbstractCharacterObject {
                     ps.setInt(52, marriageItemid);
                     ps.setTimestamp(53, new Timestamp(lastExpGainTime));
                     ps.setInt(54, ariantPoints);
-                    ps.setBoolean(55, canRecvPartySearchInvite);
-                    ps.setInt(56, id);
+                    ps.setInt(55, reborns);
+                    ps.setBoolean(56, canRecvPartySearchInvite);
+                    ps.setInt(57, id);
 
                     int updateRows = ps.executeUpdate();
                     if (updateRows < 1) {
@@ -10879,6 +10878,48 @@ public class Character extends AbstractCharacterObject {
 
     public int getAriantPoints() {
         return this.ariantPoints;
+    }
+
+    public int getReborns() {
+        return reborns;
+    }
+
+    public boolean doRebirth() {
+        if (level < getMaxClassLevel()) {
+            return false;
+        }
+        reborns++;
+        level = 1;
+        exp.set(0);
+        changeJob(Job.BEGINNER);
+
+        gainAp(500, false);
+        addMaxMPMaxHP(1000, 500, false);
+
+        effLock.lock();
+        statWlock.lock();
+        try {
+            recalcLocalStats();
+            changeHpMp(localmaxhp, localmaxmp, true);
+            List<Pair<Stat, Integer>> statup = new ArrayList<>(7);
+            statup.add(new Pair<>(Stat.AVAILABLEAP, remainingAp));
+            statup.add(new Pair<>(Stat.EXP, exp.get()));
+            statup.add(new Pair<>(Stat.LEVEL, level));
+            statup.add(new Pair<>(Stat.MAXHP, clientmaxhp));
+            statup.add(new Pair<>(Stat.MAXMP, clientmaxmp));
+            statup.add(new Pair<>(Stat.HP, hp));
+            statup.add(new Pair<>(Stat.MP, mp));
+            sendPacket(PacketCreator.updatePlayerStats(statup, true, this));
+        } finally {
+            statWlock.unlock();
+            effLock.unlock();
+        }
+
+        getWorldServer().broadcastPacket(PacketCreator.serverNotice(6,
+                getMedalText() + name + " has been reborn! [Rebirth #" + reborns + "] They grow stronger each time!"));
+        dropMessage("You have been reborn! Rebirth #" + reborns +
+                " — you gained 500 AP and +" + (reborns * 1000) + " HP / +" + (reborns * 500) + " MP total.");
+        return true;
     }
 
     public void setLanguage(int num) {

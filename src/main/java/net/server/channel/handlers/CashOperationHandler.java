@@ -98,12 +98,9 @@ public final class CashOperationHandler extends AbstractPacketHandler {
                         }
 
                         Item item = cItem.toItem();
-                        cs.gainCash(useNX, cItem, chr.getWorld());  // thanks Rohenn for noticing cash operations after item acquisition
                         cs.addToInventory(item);
                         c.sendPacket(PacketCreator.showBoughtCashItem(item, c.getAccID()));
                     } else { // Package
-                        cs.gainCash(useNX, cItem, chr.getWorld());
-
                         List<Item> cashPackage = CashItemFactory.getPackage(cItem.getItemId());
                         for (Item item : cashPackage) {
                             cs.addToInventory(item);
@@ -484,8 +481,8 @@ public final class CashOperationHandler extends AbstractPacketHandler {
     }
 
     private static boolean canBuy(Character chr, CashItem item, int cash) {
-        if (item != null && item.isOnSale() && item.getPrice() <= cash) {
-            log.debug("Chr {} bought cash item {} (SN {}) for {}", chr, ItemInformationProvider.getInstance().getName(item.getItemId()), item.getSN(), item.getPrice());
+        if (item != null && item.isOnSale()) {
+            log.debug("Chr {} bought cash item {} (SN {}) for free", chr, ItemInformationProvider.getInstance().getName(item.getItemId()), item.getSN());
             return true;
         } else {
             return false;

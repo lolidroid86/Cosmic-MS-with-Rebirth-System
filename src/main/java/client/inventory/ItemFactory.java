@@ -117,7 +117,8 @@ public enum ItemFactory {
         equip.setItemLevel(rs.getByte("itemlevel"));
         equip.setExpiration(rs.getLong("expiration"));
         equip.setGiftFrom(rs.getString("giftFrom"));
-        equip.setRingId(rs.getInt("ringid"));
+        int ringId = rs.getInt("ringid");
+        equip.setRingId(rs.wasNull() ? -1 : ringId);
 
         return equip;
     }

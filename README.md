@@ -1,4 +1,11 @@
-﻿# Cosmic
+﻿# Cosmic-MS (Rebirth Fork)
+
+> **This is a custom fork** with a Rebirth System and private-server tweaks layered on top of the upstream [Cosmic](https://github.com/P0nk/Cosmic) codebase.  
+> See [CUSTOMIZATIONS.md](CUSTOMIZATIONS.md) for what was changed and how the `@rebirth` command works.
+
+---
+
+# Cosmic
 Cosmic is a server emulator for Global MapleStory (GMS) version 83.
 
 ## Introduction

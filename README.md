@@ -1,7 +1,15 @@
-﻿# Cosmic-MS (Rebirth Fork)
+﻿# Cosmic-MS — Rebirth Fork
 
-> **This is a custom fork** with a Rebirth System and private-server tweaks layered on top of the upstream [Cosmic](https://github.com/P0nk/Cosmic) codebase.  
-> See [CUSTOMIZATIONS.md](CUSTOMIZATIONS.md) for what was changed and how the `@rebirth` command works.
+A private-server fork of [Cosmic](https://github.com/P0nk/Cosmic) (HeavenMS GMS v83) with a full Rebirth System and quality-of-life tweaks built on top.
+
+**What's added:**
+- `@rebirth` — reset to level 1 at 200, keep permanent bonus AP/HP/MP each time
+- `@buffme` — expanded GM buff set with all resistances
+- Portable MySQL launcher (`MySQL.bat`) for zero-install local dev
+- Various handler and packet fixes for private-server stability
+
+See [CUSTOMIZATIONS.md](CUSTOMIZATIONS.md) for full details, DB migration notes, and setup instructions.  
+See [CONTRIBUTORS.md](CONTRIBUTORS.md) for credits.
 
 ---
 
